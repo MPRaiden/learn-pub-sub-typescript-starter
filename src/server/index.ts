@@ -1,9 +1,17 @@
 import amqp from 'amqplib'
+import { publishJSON } from '../internal/pubsub/publish.js'
+import { ExchangePerilDirect, PauseKey } from '../internal/routing/routing.js'
 
 async function main() {
   const connectionStr = "amqp://guest:guest@localhost:5672/"
   const connection = await amqp.connect(connectionStr)
   console.log("Successful connected to RabbitMQ")
+
+  const confirmChannel = await connection.createConfirmChannel()
+  const ps = {
+    isPaused: true
+  }
+  await publishJSON(confirmChannel, ExchangePerilDirect, PauseKey, ps)
 
   process.on("SIGINT", async () => {
     try {
