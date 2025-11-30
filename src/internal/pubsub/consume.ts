@@ -1,4 +1,4 @@
-import amqp, { Channel } from 'amqplib'
+import amqp, { type Channel } from 'amqplib'
 
 export type SimpleQueueType = "durable" | "transient";
 
