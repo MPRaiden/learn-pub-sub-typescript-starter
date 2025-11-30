@@ -25,11 +25,11 @@ async function main() {
   while (true) {
     const userInput = await getInput()
 
-    if (userInput.length === 0) continue
+    if (!userInput.length) continue
 
-    const firstWord = userInput[0]
+    const command = userInput[0]
 
-    if (firstWord === "pause") {
+    if (command === "pause") {
       console.log("Pause message sent")
       const ps = {
         isPaused: true
@@ -39,7 +39,7 @@ async function main() {
       } catch (err) {
         console.error(`Error publishing Pause message -> ${err}`)
       }
-    } else if (firstWord === "resume") {
+    } else if (command === "resume") {
       console.log("Resume message sent")
       const ps = {
         isPaused: false
@@ -49,7 +49,7 @@ async function main() {
       } catch (err) {
         console.error(`Error publishing Resume message -> ${err}`)
       }
-    } else if (firstWord === "quit") {
+    } else if (command === "quit") {
       console.log("Exiting server")
       process.exit(0)
     } else {
