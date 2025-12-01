@@ -2,7 +2,7 @@ import amqp from 'amqplib'
 import { getInput, printServerHelp } from '../internal/gamelogic/gamelogic.js'
 import { declareAndBind } from '../internal/pubsub/consume.js'
 import { publishJSON } from '../internal/pubsub/publish.js'
-import { ExchangePerilDirect, ExchangePerilTopic, GameLogSlug, PauseKey, ResumeKey } from '../internal/routing/routing.js'
+import { ExchangePerilDirect, ExchangePerilTopic, GameLogSlug, PauseKey } from '../internal/routing/routing.js'
 
 async function main() {
   const connectionStr = "amqp://guest:guest@localhost:5672/"
@@ -34,21 +34,19 @@ async function main() {
 
     if (command === "pause") {
       console.log("Pause message sent")
-      const ps = {
-        isPaused: true
-      }
       try {
-        await publishJSON(confirmChannel, ExchangePerilDirect, PauseKey, ps)
+        await publishJSON(confirmChannel, ExchangePerilDirect, PauseKey, {
+          isPaused: true
+        })
       } catch (err) {
         console.error(`Error publishing Pause message -> ${err}`)
       }
     } else if (command === "resume") {
       console.log("Resume message sent")
-      const ps = {
-        isPaused: false
-      }
       try {
-        await publishJSON(confirmChannel, ExchangePerilDirect, ResumeKey, ps)
+        await publishJSON(confirmChannel, ExchangePerilDirect, PauseKey, {
+          isPaused: false
+        })
       } catch (err) {
         console.error(`Error publishing Resume message -> ${err}`)
       }

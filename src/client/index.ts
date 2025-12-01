@@ -3,8 +3,10 @@ import { clientWelcome, commandStatus, getInput, printClientHelp, printQuit } fr
 import { GameState } from '../internal/gamelogic/gamestate.js';
 import { commandMove } from '../internal/gamelogic/move.js';
 import { commandSpawn } from '../internal/gamelogic/spawn.js';
-import { declareAndBind } from '../internal/pubsub/consume.js';
+import { subscribeJSON } from '../internal/pubsub/consume.js';
 import { ExchangePerilDirect, PauseKey } from '../internal/routing/routing.js';
+import { handlerPause } from './handlers.js';
+
 
 async function main() {
   const clientConnStr = "amqp://guest:guest@localhost:5672/"
@@ -12,9 +14,9 @@ async function main() {
 
   const username = await clientWelcome()
 
-  const [channel, queue] = await declareAndBind(connection, ExchangePerilDirect, `${PauseKey}.${username}`, PauseKey, "transient")
-
   const gameState = new GameState(username)
+
+  await subscribeJSON(connection, ExchangePerilDirect, `${PauseKey}.${username}`, PauseKey, "transient", handlerPause(gameState))
 
   while (true) {
     const userInput = await getInput()
