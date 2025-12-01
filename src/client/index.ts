@@ -4,8 +4,9 @@ import { GameState } from '../internal/gamelogic/gamestate.js';
 import { commandMove } from '../internal/gamelogic/move.js';
 import { commandSpawn } from '../internal/gamelogic/spawn.js';
 import { subscribeJSON } from '../internal/pubsub/consume.js';
-import { ExchangePerilDirect, PauseKey } from '../internal/routing/routing.js';
-import { handlerPause } from './handlers.js';
+import { publishJSON } from '../internal/pubsub/publish.js';
+import { ExchangePerilDirect, ExchangePerilTopic, PauseKey } from '../internal/routing/routing.js';
+import { handlerMove, handlerPause } from './handlers.js';
 
 
 async function main() {
@@ -17,6 +18,8 @@ async function main() {
   const gameState = new GameState(username)
 
   await subscribeJSON(connection, ExchangePerilDirect, `${PauseKey}.${username}`, PauseKey, "transient", handlerPause(gameState))
+  await subscribeJSON(connection, ExchangePerilTopic, `army_moves.${username}`, 'army_moves.*', "transient", handlerMove(gameState))
+
 
   while (true) {
     const userInput = await getInput()
@@ -32,7 +35,13 @@ async function main() {
       }
     } else if (command === "move") {
       try {
-        commandMove(gameState, userInput)
+        const move = commandMove(gameState, userInput)
+        publishJSON(
+          publishCh,
+          ExchangePerilTopic,
+          `army_moves.${username}`,
+          move,
+        );
       } catch (err) {
         console.log((err as Error).message)
       }
@@ -48,7 +57,6 @@ async function main() {
       console.log("Unknown command")
       continue
     }
-
   }
 }
 
