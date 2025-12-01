@@ -14,8 +14,8 @@ async function main() {
   const connection = await amqp.connect(clientConnStr)
 
   const username = await clientWelcome()
-
   const gameState = new GameState(username)
+  const publishCh = await connection.createConfirmChannel()
 
   await subscribeJSON(connection, ExchangePerilDirect, `${PauseKey}.${username}`, PauseKey, "transient", handlerPause(gameState))
   await subscribeJSON(connection, ExchangePerilTopic, `army_moves.${username}`, 'army_moves.*', "transient", handlerMove(gameState))
