@@ -1,6 +1,6 @@
 import amqp from 'amqplib'
 import { getInput, printServerHelp } from '../internal/gamelogic/gamelogic.js'
-import { declareAndBind } from '../internal/pubsub/consume.js'
+import { declareAndBind, SimpleQueueType } from '../internal/pubsub/consume.js'
 import { publishJSON } from '../internal/pubsub/publish.js'
 import { ExchangePerilDirect, ExchangePerilTopic, GameLogSlug, PauseKey } from '../internal/routing/routing.js'
 
@@ -23,7 +23,7 @@ async function main() {
 
   const confirmChannel = await connection.createConfirmChannel()
 
-  const [channel, queue] = await declareAndBind(connection, ExchangePerilTopic, GameLogSlug, `${GameLogSlug}.*`, "durable")
+  await declareAndBind(connection, ExchangePerilTopic, GameLogSlug, `${GameLogSlug}.*`, SimpleQueueType.Durable)
 
   while (true) {
     const userInput = await getInput()

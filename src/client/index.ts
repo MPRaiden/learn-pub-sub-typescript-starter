@@ -3,7 +3,7 @@ import { clientWelcome, commandStatus, getInput, printClientHelp, printQuit } fr
 import { GameState } from '../internal/gamelogic/gamestate.js';
 import { commandMove } from '../internal/gamelogic/move.js';
 import { commandSpawn } from '../internal/gamelogic/spawn.js';
-import { subscribeJSON } from '../internal/pubsub/consume.js';
+import { SimpleQueueType, subscribeJSON } from '../internal/pubsub/consume.js';
 import { publishJSON } from '../internal/pubsub/publish.js';
 import { ExchangePerilDirect, ExchangePerilTopic, PauseKey } from '../internal/routing/routing.js';
 import { handlerMove, handlerPause } from './handlers.js';
@@ -17,8 +17,8 @@ async function main() {
   const gameState = new GameState(username)
   const publishCh = await connection.createConfirmChannel()
 
-  await subscribeJSON(connection, ExchangePerilDirect, `${PauseKey}.${username}`, PauseKey, "transient", handlerPause(gameState))
-  await subscribeJSON(connection, ExchangePerilTopic, `army_moves.${username}`, 'army_moves.*', "transient", handlerMove(gameState))
+  await subscribeJSON(connection, ExchangePerilDirect, `${PauseKey}.${username}`, PauseKey, SimpleQueueType.Transient, handlerPause(gameState))
+  await subscribeJSON(connection, ExchangePerilTopic, `army_moves.${username}`, 'army_moves.*', SimpleQueueType.Transient, handlerMove(gameState))
 
 
   while (true) {

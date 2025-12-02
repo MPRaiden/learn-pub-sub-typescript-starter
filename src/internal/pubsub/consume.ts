@@ -1,6 +1,10 @@
 import amqp, { type Channel } from 'amqplib'
 
-export type SimpleQueueType = "durable" | "transient";
+// export type SimpleQueueType = "durable" | "transient";
+export enum SimpleQueueType {
+  Durable,
+  Transient
+}
 
 /**
  *Creates a new queue and binds it to an exchange.
@@ -21,11 +25,11 @@ export async function declareAndBind(
 
   const channel = await conn.createConfirmChannel()
 
-  const durable = true ? queueType === "durable" : false
-  const autoDelete = true ? queueType === "transient" : false
-  const exclusive = true ? queueType === "transient" : false
-
-  const queue = await channel.assertQueue(queueName, { durable: durable, autoDelete: autoDelete, exclusive: exclusive })
+  const queue = await channel.assertQueue(queueName, {
+    durable: queueType === SimpleQueueType.Durable,
+    autoDelete: queueType !== SimpleQueueType.Durable,
+    exclusive: queueType !== SimpleQueueType.Durable, arguments: { "x-dead-letter-exchange": "peril_dlx" }
+  })
 
   channel.bindQueue(queueName, exchange, key)
 
@@ -78,13 +82,13 @@ export async function subscribeJSON<T>(
     const ackType = handler(data)
 
     if (ackType === AckType.Ack) {
-      console.log("Acknowledged message");
+      console.log("Ack");
       ch.ack(msg);
     } else if (ackType === AckType.NackDiscard) {
-      console.log("Discarding message");
+      console.log("NackDiscard");
       ch.nack(msg, false, false)
     } else if (ackType === AckType.NackRequeue) {
-      console.log("Requeueing message");
+      console.log("NackRequeue");
       ch.nack(msg, false, true)
     }
   })
