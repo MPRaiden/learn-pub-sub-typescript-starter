@@ -32,6 +32,12 @@ export async function declareAndBind(
   return [channel, queue]
 }
 
+export enum AckType {
+  Ack,
+  NackRequeue,
+  NackDiscard
+}
+
 /**
   Subscribes consumer to the provided queue.
   
@@ -48,7 +54,7 @@ export async function subscribeJSON<T>(
   queueName: string,
   key: string,
   queueType: SimpleQueueType,
-  handler: (data: T) => void,
+  handler: (data: T) => AckType,
 ): Promise<void> {
   const [ch, queue] = await declareAndBind(
     conn,
@@ -69,8 +75,18 @@ export async function subscribeJSON<T>(
       return;
     }
 
-    handler(data);
-    ch.ack(msg);
-  });
+    const ackType = handler(data)
+
+    if (ackType === AckType.Ack) {
+      console.log("Acknowledged message");
+      ch.ack(msg);
+    } else if (ackType === AckType.NackDiscard) {
+      console.log("Discarding message");
+      ch.nack(msg, false, false)
+    } else if (ackType === AckType.NackRequeue) {
+      console.log("Requeueing message");
+      ch.nack(msg, false, true)
+    }
+  })
 }
 
