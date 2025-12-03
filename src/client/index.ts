@@ -5,8 +5,8 @@ import { commandMove } from '../internal/gamelogic/move.js';
 import { commandSpawn } from '../internal/gamelogic/spawn.js';
 import { SimpleQueueType, subscribeJSON } from '../internal/pubsub/consume.js';
 import { publishJSON } from '../internal/pubsub/publish.js';
-import { ExchangePerilDirect, ExchangePerilTopic, PauseKey } from '../internal/routing/routing.js';
-import { handlerMove, handlerPause } from './handlers.js';
+import { ExchangePerilDirect, ExchangePerilTopic, PauseKey, WarRecognitionsPrefix } from '../internal/routing/routing.js';
+import { handlerMove, handlerPause, handlerWar } from './handlers.js';
 
 
 async function main() {
@@ -18,7 +18,9 @@ async function main() {
   const publishCh = await connection.createConfirmChannel()
 
   await subscribeJSON(connection, ExchangePerilDirect, `${PauseKey}.${username}`, PauseKey, SimpleQueueType.Transient, handlerPause(gameState))
-  await subscribeJSON(connection, ExchangePerilTopic, `army_moves.${username}`, 'army_moves.*', SimpleQueueType.Transient, handlerMove(gameState))
+  await subscribeJSON(connection, ExchangePerilTopic, `army_moves.${username}`, 'army_moves.*', SimpleQueueType.Transient, handlerMove(gameState, publishCh))
+  await subscribeJSON(connection, ExchangePerilTopic, WarRecognitionsPrefix, `${WarRecognitionsPrefix}.*`, SimpleQueueType.Durable, handlerWar(gameState),
+  )
 
 
   while (true) {
