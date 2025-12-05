@@ -7,6 +7,7 @@ import { handleWar, WarOutcome } from "../internal/gamelogic/war.js";
 import { AckType } from "../internal/pubsub/consume.js";
 import { publishJSON } from "../internal/pubsub/publish.js";
 import { ExchangePerilTopic, WarRecognitionsPrefix } from "../internal/routing/routing.js";
+import { publishGameLog } from "./index.js";
 
 export function handlerPause(gameState: GameState): (playingState: PlayingState) => AckType {
   return function(playingState: PlayingState) {
@@ -57,6 +58,7 @@ export function handlerMove(
 
 export function handlerWar(
   gs: GameState,
+  ch: ConfirmChannel,
 ): (war: RecognitionOfWar) => Promise<AckType> {
   return async (war: RecognitionOfWar): Promise<AckType> => {
     try {
@@ -68,8 +70,13 @@ export function handlerWar(
         case WarOutcome.NoUnits:
           return AckType.NackDiscard;
         case WarOutcome.YouWon:
+          publishGameLog(ch, gs.getUsername(), `${outcome.winner} won a war against ${outcome.loser}`)
+          return AckType.Ack;
         case WarOutcome.OpponentWon:
+          publishGameLog(ch, gs.getUsername(), `${outcome.winner} won a war against ${outcome.loser}`)
+          return AckType.Ack;
         case WarOutcome.Draw:
+          publishGameLog(ch, gs.getUsername(), `A war between${outcome.attacker} and ${outcome.defender}`)
           return AckType.Ack;
         default:
           const unreachable: never = outcome;

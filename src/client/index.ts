@@ -1,13 +1,25 @@
-import amqp from 'amqplib'
+import amqp, { ConfirmChannel } from 'amqplib'
 import { clientWelcome, commandStatus, getInput, printClientHelp, printQuit } from '../internal/gamelogic/gamelogic.js';
 import { GameState } from '../internal/gamelogic/gamestate.js';
+import { GameLog } from '../internal/gamelogic/logs.js';
 import { commandMove } from '../internal/gamelogic/move.js';
 import { commandSpawn } from '../internal/gamelogic/spawn.js';
 import { SimpleQueueType, subscribeJSON } from '../internal/pubsub/consume.js';
-import { publishJSON } from '../internal/pubsub/publish.js';
-import { ExchangePerilDirect, ExchangePerilTopic, PauseKey, WarRecognitionsPrefix } from '../internal/routing/routing.js';
+import { publishJSON, publishMsgPack } from '../internal/pubsub/publish.js';
+import { ExchangePerilDirect, ExchangePerilTopic, GameLogSlug, PauseKey, WarRecognitionsPrefix } from '../internal/routing/routing.js';
 import { handlerMove, handlerPause, handlerWar } from './handlers.js';
 
+
+export function publishGameLog(ch: ConfirmChannel, userName: string, msg: string) {
+  const gl: GameLog = {
+    username: userName,
+    message: msg,
+    currentTime: new Date()
+  }
+
+  publishMsgPack(ch, ExchangePerilTopic, `${GameLogSlug}.${userName}`, gl)
+
+}
 
 async function main() {
   const clientConnStr = "amqp://guest:guest@localhost:5672/"
@@ -19,7 +31,7 @@ async function main() {
 
   await subscribeJSON(connection, ExchangePerilDirect, `${PauseKey}.${username}`, PauseKey, SimpleQueueType.Transient, handlerPause(gameState))
   await subscribeJSON(connection, ExchangePerilTopic, `army_moves.${username}`, 'army_moves.*', SimpleQueueType.Transient, handlerMove(gameState, publishCh))
-  await subscribeJSON(connection, ExchangePerilTopic, WarRecognitionsPrefix, `${WarRecognitionsPrefix}.*`, SimpleQueueType.Durable, handlerWar(gameState),
+  await subscribeJSON(connection, ExchangePerilTopic, WarRecognitionsPrefix, `${WarRecognitionsPrefix}.*`, SimpleQueueType.Durable, handlerWar(gameState, publishCh),
   )
 
 
