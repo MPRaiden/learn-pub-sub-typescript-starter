@@ -1,8 +1,10 @@
 import amqp from 'amqplib'
 import { getInput, printServerHelp } from '../internal/gamelogic/gamelogic.js'
-import { declareAndBind, SimpleQueueType } from '../internal/pubsub/consume.js'
+import { SimpleQueueType, subscribeMsgPack } from '../internal/pubsub/consume.js'
 import { publishJSON } from '../internal/pubsub/publish.js'
 import { ExchangePerilDirect, ExchangePerilTopic, GameLogSlug, PauseKey } from '../internal/routing/routing.js'
+import { handlerLogs } from './handlers.js'
+
 
 async function main() {
   const connectionStr = "amqp://guest:guest@localhost:5672/"
@@ -23,7 +25,7 @@ async function main() {
 
   const confirmChannel = await connection.createConfirmChannel()
 
-  await declareAndBind(connection, ExchangePerilTopic, GameLogSlug, `${GameLogSlug}.*`, SimpleQueueType.Durable)
+  await subscribeMsgPack(connection, ExchangePerilTopic, GameLogSlug, `${GameLogSlug}.*`, SimpleQueueType.Durable, handlerLogs())
 
   while (true) {
     const userInput = await getInput()

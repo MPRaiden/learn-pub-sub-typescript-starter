@@ -1,4 +1,5 @@
 import amqp, { type Channel } from 'amqplib'
+import { decode } from "@msgpack/msgpack";
 
 // export type SimpleQueueType = "durable" | "transient";
 export enum SimpleQueueType {
@@ -60,50 +61,94 @@ export async function subscribeJSON<T>(
   queueType: SimpleQueueType,
   handler: (data: T) => Promise<AckType> | AckType,
 ): Promise<void> {
+  return subscribe(conn, exchange, queueName, key, queueType, handler, (data) => JSON.parse(data.toString()))
+}
+
+/**
+  Subscribes consumer to the provided queue.
+  
+  @param {amqp.ChannelModel} conn - connection.
+  @param {string} exchange - exchange that routes the message to the queue.
+  @param {string} queueName - name of the queue.
+  @param {string} key - routing key of the exchange.
+  @param {SimpleQueueType} queueType - type of queue (durable or transient).
+  @param {(data: T) => void} handler that uses the parsed message as its argument.
+*/
+export async function subscribeMsgPack<T>(
+  conn: amqp.ChannelModel,
+  exchange: string,
+  queueName: string,
+  key: string,
+  queueType: SimpleQueueType,
+  handler: (data: T) => Promise<AckType> | AckType,
+): Promise<void> {
+  return subscribe(conn, exchange, queueName, key, queueType, handler, (data) => decode(data) as T)
+}
+
+/**
+  Subscribes consumer to the provided queue.
+
+  @param {amqp.ChannelModel} conn - connection.
+  @param {string} exchange - exchange that routes the message to the queue.
+  @param {string} queueName - name of the queue.
+  @param {string} routingKey - routing key of the exchange.
+  @param {SimpleQueueType} simpleQueueType - type of queue (durable or transient).
+  @param {(data: T) => Promise<AckType> | AckType} handler that uses the parsed message as its argument.
+  @param {(data: Buffer) => T} unmarshaller -
+*/
+export async function subscribe<T>(
+  conn: amqp.ChannelModel,
+  exchange: string,
+  queueName: string,
+  routingKey: string,
+  simpleQueueType: SimpleQueueType,
+  handler: (data: T) => Promise<AckType> | AckType,
+  unmarshaller: (data: Buffer) => T,
+): Promise<void> {
   const [ch, queue] = await declareAndBind(
     conn,
     exchange,
     queueName,
-    key,
-    queueType,
-  );
+    routingKey,
+    simpleQueueType,
+  )
 
   await ch.consume(queue.queue, async (msg: amqp.ConsumeMessage | null) => {
-    if (!msg) return;
+    if (!msg) return
 
-    let data: T;
+    let data: T
     try {
-      data = JSON.parse(msg.content.toString());
+      data = unmarshaller(msg.content)
     } catch (err) {
-      console.error("Could not unmarshal message:", err);
-      return;
+      console.error("Could not unmarshal message:", err)
+      return
     }
 
     try {
-      const result = await handler(data);
+      const result = await handler(data)
       switch (result) {
         case AckType.Ack:
-          ch.ack(msg);
-          console.log("Ack");
-          break;
+          ch.ack(msg)
+          console.log("Ack")
+          break
         case AckType.NackDiscard:
-          ch.nack(msg, false, false);
-          console.log("NackDiscard");
-          break;
+          ch.nack(msg, false, false)
+          console.log("NackDiscard")
+          break
         case AckType.NackRequeue:
-          ch.nack(msg, false, true);
-          console.log("NackRequeue");
-          break;
+          ch.nack(msg, false, true)
+          console.log("NackRequeue")
+          break
         default:
-          const unreachable: never = result;
-          console.error("Unexpected ack type:", unreachable);
-          return;
+          const unreachable: never = result
+          console.error("Unexpected ack type:", unreachable)
+          return
       }
     } catch (err) {
-      console.error("Error handling message:", err);
-      ch.nack(msg, false, false);
-      return;
+      console.error("Error handling message:", err)
+      ch.nack(msg, false, false)
+      return
     }
-  });
+  })
 }
 
