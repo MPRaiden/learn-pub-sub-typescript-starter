@@ -27,6 +27,12 @@ async function main() {
 
   await subscribeMsgPack(connection, ExchangePerilTopic, GameLogSlug, `${GameLogSlug}.*`, SimpleQueueType.Durable, handlerLogs())
 
+  // Used to run the server from a non-interactive source, like the multiserver.sh file
+  if (!process.stdin.isTTY) {
+    console.log("Non-interactive mode: skipping command input.")
+    return
+  }
+
   while (true) {
     const userInput = await getInput()
 

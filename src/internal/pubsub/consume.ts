@@ -112,6 +112,7 @@ export async function subscribe<T>(
     routingKey,
     simpleQueueType,
   )
+  await ch.prefetch(10)
 
   await ch.consume(queue.queue, async (msg: amqp.ConsumeMessage | null) => {
     if (!msg) return
